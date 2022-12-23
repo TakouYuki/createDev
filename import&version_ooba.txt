@@ -1,8 +1,7 @@
-import os
-import azure.cognitiveservices.speech as speechsdk
-import time
-import sys
-import pykakasi
-import re
+import
+azure-recognitiveservices-speech
+time
+pykakasi
+janome
 
 Python 3.10.8
