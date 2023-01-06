@@ -6,7 +6,7 @@ import pykakasi
 import re
 from janome.tokenizer import Tokenizer
 
-# ファイルの長さの変数　time
+# ファイルの長さ　time
 
 speech_config = speechsdk.SpeechConfig(subscription="9b198a686fbf45c79fe8c1f24f02249d", region="japaneast")
 speech_config.speech_recognition_language="ja-JP"
@@ -111,7 +111,7 @@ print('ひげ総数',hige_total_count)
 
 f.close()
 
-with open ('NG.txt','r',encoding = "utf-8") as f:
+with open ('test.txt','r',encoding = "utf-8") as f:
     NG = f.read().splitlines()
 
 for a in NG:
@@ -151,4 +151,6 @@ print('\n文字数トータル ',total_count)
 # file.write(str(total_count))
 # file.write('\n')
 
+# bpm = total_count / time
+# print('1分あたりの話量',bpm)
 # file.close()
