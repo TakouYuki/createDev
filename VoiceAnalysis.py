@@ -1,8 +1,8 @@
 import librosa
 import librosa.display
-import soundfile as sf
 import matplotlib.pyplot as plt
 import numpy as np
+import scipy.interpolate as scipl
 
 
 #A特性カーブ
@@ -51,15 +51,67 @@ plt.xlabel('Time[s]')
 plt.ylabel('Noise Level[dB]')
 plt.savefig('volume.png')
 plt.close()
-print()
 
 
-# 音の大きさ、高さを判定する。
+# dtごとに平均をとった音の大きさと高さをスプライン補間によって、滑らかに繋いだグラフを作成する。
+dt=5
+V_ave_dt=np.array([])
+F_ave_dt=np.array([])
+t=np.array([])
+Vtmp,Ftmp=0,0
+for i in range(int(len(times)/(dt*sr/512))) :
+    Vtmp,Ftmp,jtmp=0,0,0
+    for j in range(int(dt*sr/512)) :
+        Vtmp+=vol[int(dt*sr/512*i+j)]
+        if f0[int(dt*sr/512*i+j)]<10000:
+            Ftmp+=f0[int(dt*sr/512*i+j)]
+            jtmp+=1
+
+    Vtmp/=dt*sr/512
+    if jtmp!=0:
+        Ftmp/=jtmp
+    for j in range(int(dt*sr/512)):
+        V_ave_dt=np.append(V_ave_dt, Vtmp)
+        F_ave_dt=np.append(F_ave_dt, Ftmp)
+Vtmp,Ftmp,jtmp=0,0,0
+for k in range(len(times)-(i+1)*(j+1)) :
+    Vtmp+=vol[(i+1)*(j+1)+k]
+    if f0[(i+1)*(j+1)+k]<10000 :
+        Ftmp+=f0[(i+1)*(j+1)+k]
+        jtmp+=1
+Vtmp/=len(times)-(i+1)*(j+1)
+if jtmp!=0:
+    Ftmp/=jtmp
+for k in range(len(times)-(i+1)*(j+1)):
+    V_ave_dt=np.append(V_ave_dt, Vtmp)
+    F_ave_dt=np.append(F_ave_dt, Ftmp)
+plt.plot(times, V_ave_dt)
+plt.title("Noise Level-Time Graph (5s ave)")
+plt.xlabel('Time[s]')
+plt.ylabel('Noise Level[dB]')
+plt.savefig('volume(dt=5s).png')
+plt.close()
+
+plt.plot(times, F_ave_dt)
+plt.title("f0-Time Graph (5s ave)")
+plt.xlabel('Time[s]')
+plt.ylabel('f0[Hz]')
+plt.savefig('f0(dt=5s).png')
+plt.close()
+
+
+
+
+# 音の大きさの判定
 levelV=[0, 10, 20, 30, 40]
-cntV,cntV_all=0,0
+cntV,cntV_all,cntV_all_true,cntEm_all,cntEm,V_ave,cntcntEm,empty_ave=0,0,0,0,0,0,0,0
 for i in range(len(times)) :
     if vol[i]>levelV[0] :
-        cntV_all+=1
+        cntV_all+=1             #間なしのカウント
+        cntV_all_true+=1        #間ありのカウント
+        cntEm=0.5*sr/512        #1s = sr個 = sr/512 times
+        V_ave+=vol[i]
+
         if vol[i]>levelV[4] :
             cntV+=4
         elif vol[i]>levelV[3] :
@@ -68,23 +120,28 @@ for i in range(len(times)) :
             cntV+=2
         elif vol[i]>levelV[1] :
             cntV+=1
+    elif cntEm>0 :
+        if cntEm==0.5*sr/512 :
+            cntcntEm+=1
+        cntV_all_true+=1
+        cntEm_all+=1
+        cntEm-=1
+    elif cntEm==0 :
+        cntV_all_true-=0.5*sr/512
+        cntEm_all-=0.5*sr/512
+V_ave/=cntV_all
+empty_ave=cntEm_all/cntcntEm*512/sr
+
+time=cntV_all_true/len(times)*len(y)/sr
 
 
-
-if cntV_all!=0 :
-    print(cntV/cntV_all)
-else :
-    print("声は録音されませんでした。")
-
-time=cntV_all/len(times)*len(y)/sr
-print(time)
-
-
+#音の高さの判定
 levelF=[100, 500, 1000, 1500, 2000]
-cntF,cntF_all=0,0
+cntF,cntF_all,F_ave=0,0,0
 for i in range(len(times)) :
     if levelF[0]<=f0[i]<=levelF[4] :
         cntF_all+=1
+        F_ave+=f0[i]
         if f0[i]>levelF[4] :
             cntF+=4
         elif f0[i]>levelF[3] :
@@ -93,9 +150,22 @@ for i in range(len(times)) :
             cntF+=2
         elif f0[i]>levelF[1] :
             cntF+=1
+F_ave/=cntF_all
 
+
+#結果の出力
+if cntV_all!=0 :
+    print(cntV/cntV_all)                    #声の平均的な大きさ(0~4の5段階評価)
+    print(V_ave)                            #声の平均的な大きさが環境音の何倍か[dB] or 人の最小可聴値の何倍か[dB]
+    print(empty_ave)                        #間の平均的な長さ[s]
+else :
+    print("声は録音されませんでした。")
+print(time)                                 #話している時間[s]
 if cntF_all!=0 :
-    print(cntF/cntF_all)
+    print(cntF/cntF_all)                    #声の平均的な高さ(0~4の5段階評価)
+    print(F_ave)                            #声の平均的な高さ[Hz]
 
 
-# 間の長さ、相槌、割り込み。話し手聞き手の割合を判定する。
+
+
+#相槌、割り込み、話し手聞き手の割合を判定する。
