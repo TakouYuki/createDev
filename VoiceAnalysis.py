@@ -11,7 +11,7 @@ def A(f0):
     return 20*np.log10(RA)+2.00
 
 # ファイル読み込み
-filename = "C:\\Users\\black\\OneDrive\\ドキュメント\\創造設計1班\\sozo\\2022-11-18_13-40-34aaa.wav"
+filename = ".\\test2.wav"
 y, sr = librosa.load(filename)
 
 
@@ -35,14 +35,16 @@ plt.close()
 # 音量をrmsと常用対数により求める。
 rms = librosa.feature.rms(y=y)   #音圧[Pa], rms➡音圧実効値
 vol = np.array([])
-vol0=rms[0][10]                 #ノイズの音圧実効値
-cout_all=0
+for i in range(len(times)) :                #ノイズの音圧実効値
+    if (50<f0[i]<10000)==0 :
+        vol0=rms[0][i]
+        break
 for i in range(len(times)) :
-    if rms[0][i]!=0 and f0[i]<10000 :
-            vol=np.append(vol, 20 * np.log10(rms[0][i]/vol0)+A(f0[i])-A(f0[10])) #音圧実効値➡音圧レベルに変換   #環境音の何倍か(負の無限大にいかないようにオフセット残す)
+    if rms[0][i]!=0 and 50<f0[i]<10000 :
+            vol=np.append(vol, 20 * np.log10(rms[0][i]/vol0))#+A(f0[i])+3.32786) #音圧実効値➡音圧レベルに変換   #環境音の何倍か(負の無限大にいかないようにオフセット残す)
     else :
         vol=np.append(vol, 0)
-    if vol[i]-4<0 :
+    if vol[i]-5<0 :
         vol[i]=0
 
 plt.plot(times, vol)
@@ -53,7 +55,7 @@ plt.savefig('volume.png')
 plt.close()
 
 
-# dtごとに平均をとった音の大きさと高さをスプライン補間によって、滑らかに繋いだグラフを作成する。
+# dtごとに平均をとった音の大きさと高さのグラフを作成する。
 dt=5
 V_ave_dt=np.array([])
 F_ave_dt=np.array([])
@@ -106,10 +108,10 @@ plt.close()
 levelV=[0, 10, 20, 30, 40]
 cntV,cntV_all,cntV_all_true,cntEm_all,cntEm,V_ave,cntcntEm,empty_ave=0,0,0,0,0,0,0,0
 for i in range(len(times)) :
-    if vol[i]>levelV[0] :
+    if vol[i]>0:
         cntV_all+=1             #間なしのカウント
         cntV_all_true+=1        #間ありのカウント
-        cntEm=0.5*sr/512        #1s = sr個 = sr/512 times
+        cntEm=0.4*sr/512        #間判定の秒数(1s = sr個 = sr/512 times)
         V_ave+=vol[i]
 
         if vol[i]>levelV[4] :
@@ -121,14 +123,12 @@ for i in range(len(times)) :
         elif vol[i]>levelV[1] :
             cntV+=1
     elif cntEm>0 :
-        if cntEm==0.5*sr/512 :
-            cntcntEm+=1
-        cntV_all_true+=1
-        cntEm_all+=1
-        cntEm-=1
-    elif cntEm==0 :
-        cntV_all_true-=0.5*sr/512
-        cntEm_all-=0.5*sr/512
+        if cntEm==0.4*sr/512 :
+            cntcntEm+=1              #間になった瞬間にだけ間の回数を増やす。
+        cntV_all_true+=1             #間の間も真にしゃべっている時間を増やす。
+        cntEm_all+=1                 #間の時間をカウントする。
+        cntEm-=1                     #間判定の時間を経過させていく。
+
 V_ave/=cntV_all
 empty_ave=cntEm_all/cntcntEm*512/sr
 
@@ -168,4 +168,8 @@ if cntF_all!=0 :
 
 
 
+
 #相槌、割り込み、話し手聞き手の割合を判定する。
+
+
+
