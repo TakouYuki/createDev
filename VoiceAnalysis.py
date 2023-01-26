@@ -3,7 +3,11 @@ import librosa.display
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.interpolate as scipl
+import pandas as pd
 
+Wpm=400
+sex=0
+f0_ave=[150, 270]
 
 #A特性カーブ
 def A(f0):
@@ -105,29 +109,25 @@ plt.close()
 
 
 # 音の大きさの判定
-levelV=[0, 10, 20, 30, 40]
-cntV,cntV_all,cntV_all_true,cntEm_all,cntEm,V_ave,cntcntEm,empty_ave=0,0,0,0,0,0,0,0
+Em_t=1.3
+cntV_all,cntV_all_true,cntEm_all,cntEm,V_ave,cntcntEm,empty_ave=0,0,0,0,0,0,0
 for i in range(len(times)) :
     if vol[i]>0:
-        cntV_all+=1             #間なしのカウント
-        cntV_all_true+=1        #間ありのカウント
-        cntEm=0.4*sr/512        #間判定の秒数(1s = sr個 = sr/512 times)
+        cntV_all+=1                         #間なしのカウント
+        cntV_all_true+=1                    #間ありのカウント
+        cntEm=(int)(Em_t*sr/512)            #間判定の秒数(1s = sr個 = sr/512 times)
         V_ave+=vol[i]
-
-        if vol[i]>levelV[4] :
-            cntV+=4
-        elif vol[i]>levelV[3] :
-            cntV+=3
-        elif vol[i]-levelV[2] :
-            cntV+=2
-        elif vol[i]>levelV[1] :
-            cntV+=1
-    elif cntEm>0 :
-        if cntEm==0.4*sr/512 :
-            cntcntEm+=1              #間になった瞬間にだけ間の回数を増やす。
-        cntV_all_true+=1             #間の間も真にしゃべっている時間を増やす。
-        cntEm_all+=1                 #間の時間をカウントする。
-        cntEm-=1                     #間判定の時間を経過させていく。
+    elif cntEm>=0 :
+        if cntEm==(int)(Em_t*sr/512) :
+            cntcntEm+=1                     #間になった瞬間にだけ間の回数を増やす。
+        if cntEm>0:
+            cntV_all_true+=1                #間の間も真にしゃべっている時間を増やす。
+            cntEm_all+=1                    #間の時間をカウントする。
+        if cntEm==0:
+            cntV_all_true-=(int)(Em_t*sr/512)
+            cntEm_all-=(int)(Em_t*sr/512)
+            cntcntEm-=1
+        cntEm-=1                            #間判定の時間を経過させていく。
 
 V_ave/=cntV_all
 empty_ave=cntEm_all/cntcntEm*512/sr
@@ -136,40 +136,68 @@ time=cntV_all_true/len(times)*len(y)/sr
 
 
 #音の高さの判定
-levelF=[100, 500, 1000, 1500, 2000]
-cntF,cntF_all,F_ave=0,0,0
+cntF_all,F_ave=0,0
 for i in range(len(times)) :
-    if levelF[0]<=f0[i]<=levelF[4] :
+    if 50<f0[i]<10000 :
         cntF_all+=1
         F_ave+=f0[i]
-        if f0[i]>levelF[4] :
-            cntF+=4
-        elif f0[i]>levelF[3] :
-            cntF+=3
-        elif f0[i]-levelF[2] :
-            cntF+=2
-        elif f0[i]>levelF[1] :
-            cntF+=1
 F_ave/=cntF_all
 
 
 #結果の出力
 if cntV_all!=0 :
-    print(cntV/cntV_all)                    #声の平均的な大きさ(0~4の5段階評価)
     print(V_ave)                            #声の平均的な大きさが環境音の何倍か[dB] or 人の最小可聴値の何倍か[dB]
     print(empty_ave)                        #間の平均的な長さ[s]
+
 else :
     print("声は録音されませんでした。")
 print(time)                                 #話している時間[s]
 if cntF_all!=0 :
-    print(cntF/cntF_all)                    #声の平均的な高さ(0~4の5段階評価)
     print(F_ave)                            #声の平均的な高さ[Hz]
 
+
+#bigfiveを計算
+logF=np.log10(F_ave/f0_ave[sex])
+logWpm=np.log10(Wpm/400)
+bigfive=[]
+
+#外向性
+bigfive.append(-53.50075470756*logF**2+14.389064689477*logF-84.378980658059*logWpm**2+16.561756149192*logWpm+24.991783088367)
+#情緒不安定性
+bigfive.append(49.35579530889*logF**2-0.54460603183674*logF+12.727457105757*logWpm**2-4.5402945174996*logWpm+19.20506882761)
+#経験への開放性
+bigfive.append(-63.60317068405*logF**2+2.6943666934754*logF-97.86211897341*logWpm**2+10.680010971777*logWpm+22.587194152335)
+#勤勉性
+bigfive.append(-85.2966634461*logF**2-3.3536266295536*logF-141.60276695818*logWpm**2+24.997416986711*logWpm+26.805124137738)
+#協調性
+bigfive.append(-128.41373455909*logF**2+3.1816457761492*logF-157.14417768061*logWpm**2-9.4417488311249*logWpm+26.228817191891)
+
+
+#レーダーチャートの作成
+plt.rcParams['font.family'] = "MS Gothic"
+data = {'A': [bigfive[0], bigfive[1], bigfive[2], bigfive[3], bigfive[4]]}
+df = pd.DataFrame(data, index=['\n\n外向性\n\n', '情緒不安定性\n\n', '\n\n経験への開放性', '\n\n勤勉性', '協調性\n\n'])
+columns = df.index
+fig, ax = plt.subplots(1, 1, figsize=(7, 8), subplot_kw={'projection': 'polar'})
+values_A = df["A"]
+angles_A = np.linspace(start=0, stop=2*np.pi, num=len(df["A"])+1, endpoint=True)
+values_A = np.concatenate((df["A"], [df["A"][0]]))
+ax.plot(angles_A, values_A, 'o-', color="blue", label="あなた")
+ax.fill(angles_A, values_A, alpha=0.3, color="blue")
+ax.set_thetagrids(angles_A[:-1] * 180 / np.pi, columns, fontsize=17)
+ax.set_theta_zero_location('N')
+ax.set_rlim(0, 100)
+gridlines = ax.yaxis.get_gridlines()
+gridlines[2].set_color("black")
+gridlines[2].set_linewidth(2)
+gridlines[2].set_linestyle("--")
+ax.set_title("聞き手が感じる性格印象", fontsize=25)
+ax.legend(bbox_to_anchor=(1, 1), loc='upper right', ncol=2)
+
+plt.savefig('Chart.png')
+plt.show()
 
 
 
 
 #相槌、割り込み、話し手聞き手の割合を判定する。
-
-
-
