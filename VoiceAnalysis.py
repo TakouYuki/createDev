@@ -1,13 +1,10 @@
 import librosa
 import librosa.display
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import scipy.interpolate as scipl
 import pandas as pd
-
-Wpm=400
-sex=0
-f0_ave=[150, 270]
 
 #A特性カーブ
 def A(f0):
@@ -24,14 +21,13 @@ f0, voiced_flag, voiced_probs = librosa.pyin(y, fmin=librosa.note_to_hz('C2'), f
 times = librosa.times_like(f0) 
 
 #plt.plot(times, y)
-plt.show()
-plt.close()
 D = librosa.amplitude_to_db(np.abs(librosa.stft(y)), ref=np.max)
 fig, ax = plt.subplots()
 img = librosa.display.specshow(D, x_axis='time', y_axis='log', ax=ax)
 ax.set(title='pYIN fundamental frequency estimation')
 fig.colorbar(img, ax=ax, format="%+2.f dB")
 ax.plot(times, f0, label='f0', color='cyan', linewidth=3)
+plt.rcParams['font.family'] = "MS Gothic"
 ax.legend(loc='upper right')
 plt.savefig('stft.png')
 plt.close()
@@ -52,6 +48,7 @@ for i in range(len(times)) :
         vol[i]=0
 
 plt.plot(times, vol)
+plt.rcParams['font.family'] = "MS Gothic"
 plt.title("Noise Level-Time Graph")
 plt.xlabel('Time[s]')
 plt.ylabel('Noise Level[dB]')
@@ -91,13 +88,15 @@ if jtmp!=0:
 for k in range(len(times)-(i+1)*(j+1)):
     V_ave_dt=np.append(V_ave_dt, Vtmp)
     F_ave_dt=np.append(F_ave_dt, Ftmp)
+plt.rcParams['font.family'] = "MS Gothic"
 plt.plot(times, V_ave_dt)
-plt.title("Noise Level-Time Graph (5s ave)")
+plt.title("5秒ごとの平均音圧レベル")
 plt.xlabel('Time[s]')
-plt.ylabel('Noise Level[dB]')
+plt.ylabel('音圧レベル[dB]')
 plt.savefig('volume(dt=5s).png')
 plt.close()
 
+plt.rcParams['font.family'] = "MS Gothic"
 plt.plot(times, F_ave_dt)
 plt.title("f0-Time Graph (5s ave)")
 plt.xlabel('Time[s]')
@@ -132,7 +131,8 @@ for i in range(len(times)) :
 V_ave/=cntV_all
 empty_ave=cntEm_all/cntcntEm*512/sr
 
-time=cntV_all_true/len(times)*len(y)/sr
+times_all=len(y)/sr
+time=cntV_all_true/len(times)*times_all
 
 
 #音の高さの判定
@@ -155,48 +155,149 @@ print(time)                                 #話している時間[s]
 if cntF_all!=0 :
     print(F_ave)                            #声の平均的な高さ[Hz]
 
+#黙っている時間、話している比、全部の時間
+Silent=0
+Prop=0
+
+
 
 #bigfiveを計算
+def func(x, y, i):
+    match i:
+        case 0:
+            return 7.4153882932119*(-53.50075470756*x**2+14.389064689477*x-84.378980658059*y**2+16.561756149192*y+24.991783088367)-98.524033847039 #外向性
+        case 1:
+            return 10.523312934435*(49.35579530889*x**2-0.54460603183674*x+12.727457105757*y**2-4.5402945174996*y+19.20506882761)-197.82355052927  #情緒不安定性
+        case 2:
+            return 6.4644778677204*(-63.60317068405*x**2+2.6943666934754*x-97.86211897341*y**2+10.680010971777*y+22.587194152335)-48.082440963659  #経験への開放性
+        case 3:
+            return 3.7329190850909*(-85.2966634461*x**2-3.3536266295536*x-141.60276695818*y**2+24.997416986711*y+26.805124137738)-4.3026120322499  #勤勉性
+        case 4:
+            return 3.6219890942118*(-128.41373455909*x**2+3.1816457761492*x-157.14417768061*y**2-9.4417488311249*y+26.228817191891)+4.4146212070231#協調性
+
+total_count=400
+Wpm=total_count/(time/60)
+sex=0
+f0_ave=[150, 270]
 logF=np.log10(F_ave/f0_ave[sex])
 logWpm=np.log10(Wpm/400)
 bigfive=[]
 
-#外向性
-bigfive.append(-53.50075470756*logF**2+14.389064689477*logF-84.378980658059*logWpm**2+16.561756149192*logWpm+24.991783088367)
-#情緒不安定性
-bigfive.append(49.35579530889*logF**2-0.54460603183674*logF+12.727457105757*logWpm**2-4.5402945174996*logWpm+19.20506882761)
-#経験への開放性
-bigfive.append(-63.60317068405*logF**2+2.6943666934754*logF-97.86211897341*logWpm**2+10.680010971777*logWpm+22.587194152335)
-#勤勉性
-bigfive.append(-85.2966634461*logF**2-3.3536266295536*logF-141.60276695818*logWpm**2+24.997416986711*logWpm+26.805124137738)
-#協調性
-bigfive.append(-128.41373455909*logF**2+3.1816457761492*logF-157.14417768061*logWpm**2-9.4417488311249*logWpm+26.228817191891)
+for i in range(5) :
+    bigfive.append(func(logF, logWpm, i))
+
+
 
 
 #レーダーチャートの作成
-plt.rcParams['font.family'] = "MS Gothic"
-data = {'A': [bigfive[0], bigfive[1], bigfive[2], bigfive[3], bigfive[4]]}
+data = {
+    'A': [bigfive[0], bigfive[1], bigfive[2], bigfive[3], bigfive[4]],
+    'B':[func(0,0,0),func(0,0,1),func(0,0,2),func(0,0,3),func(0,0,4)]
+    }
 df = pd.DataFrame(data, index=['\n\n外向性\n\n', '情緒不安定性\n\n', '\n\n経験への開放性', '\n\n勤勉性', '協調性\n\n'])
-columns = df.index
 fig, ax = plt.subplots(1, 1, figsize=(7, 8), subplot_kw={'projection': 'polar'})
-values_A = df["A"]
 angles_A = np.linspace(start=0, stop=2*np.pi, num=len(df["A"])+1, endpoint=True)
 values_A = np.concatenate((df["A"], [df["A"][0]]))
-ax.plot(angles_A, values_A, 'o-', color="blue", label="あなた")
-ax.fill(angles_A, values_A, alpha=0.3, color="blue")
+angles_B = np.linspace(start=0, stop=2*np.pi, num=len(df["B"])+1, endpoint=True)
+values_B = np.concatenate((df["B"], [df["B"][0]]))
+ax.plot(angles_A, values_A, 'o-', color="red", label="あなた")
+ax.fill(angles_A, values_A, alpha=0.3, color="red")
+ax.plot(angles_B, values_B, 'o-', color="blue", label="全体平均")
+ax.fill(angles_B, values_B, alpha=0.3, color="blue")
+columns = df.index
 ax.set_thetagrids(angles_A[:-1] * 180 / np.pi, columns, fontsize=17)
 ax.set_theta_zero_location('N')
 ax.set_rlim(0, 100)
 gridlines = ax.yaxis.get_gridlines()
-gridlines[2].set_color("black")
-gridlines[2].set_linewidth(2)
-gridlines[2].set_linestyle("--")
+#gridlines[2].set_color("black")
+#gridlines[2].set_linewidth(2)
+#gridlines[2].set_linestyle("--")
 ax.set_title("聞き手が感じる性格印象", fontsize=25)
 ax.legend(bbox_to_anchor=(1, 1), loc='upper right', ncol=2)
 
 plt.savefig('Chart.png')
-plt.show()
+plt.close()
 
+
+
+
+#3Dグラフの作成
+# メッシュを作成
+x = np.arange(-0.2, 0.4, 0.01)
+y = np.arange(-0.2, 0.2, 0.01)
+X, Y = np.meshgrid(x, y)
+
+# plot_surfaceで曲面プロット
+for i in range(5):
+    plt.rcParams['font.family'] = "MS Gothic"
+    fig, ax = plt.subplots(figsize=(6, 6), subplot_kw={'projection' : '3d'})
+    fig.colorbar(ax.plot_surface(X, Y, func(X, Y, i), rstride=1, cstride=10, cmap='jet', alpha=0.4), ax=ax, shrink=0.5)
+    ax.scatter3D(logF, logWpm, bigfive[i], s=10, color='red', depthshade=True)
+    ax.plot(logF, logWpm, bigfive[i], c='r', marker='.', ls='None', label='あなた('+str(bigfive[i])+')')
+    ax.plot(logF, logWpm, 0, c='k', marker='.')
+    zl = np.linspace(0, bigfive[i])
+    xl=zl*0+logF
+    yl=zl*0+logWpm
+    ax.plot(xl, yl, zl, c='k', ls=':', markersize=1)
+    ax.set_xlabel('\n\n周波数', size=15)
+    ax.set_ylabel('\n\n発話速度', size=15)
+    ax.set_xlabel('\n\n周波数(log scale)', size=15)
+    ax.set_ylabel('\n\n発話速度(log scale)', size=15)
+    ax.set_zticks([])
+    ax.view_init(elev=50, azim=225)
+    match i:
+        case 0:
+            ax.plot(0.134475, 0.0981391, 100, c='b', marker='.', ls='None', label='最大(100)')
+            ax.legend(fontsize=7)
+            ax.plot(0.134475, 0.0981391, 0, c='k', marker='.')
+            zl = np.linspace(0, 100)
+            xl=zl*0+0.134475
+            yl=zl*0+0.0981391
+            ax.plot(xl, yl, zl, c='k', ls=':', markersize=1)
+            ax.set_title('外向性\n', size=25)
+            plt.savefig("E.png")
+            plt.show()
+        case 1:
+            ax.plot(0.00551714, 0.178366, 0, c='k', marker='.')
+            ax.plot(0.00551714, 0.178366, 3, c='b', marker='.', ls='None', label='最小(0)')
+            ax.legend(fontsize=7)
+            ax.set_title('情緒不安定性\n', size=25)
+            plt.savefig("N.png")
+            plt.show()
+        case 2:
+            ax.plot(0.0211811, 0.0545666, 100, c='b', marker='.', ls='None', label='最大(100)')
+            ax.legend(fontsize=7)
+            ax.plot(0.0211811, 0.0545666, 0, c='k', marker='.')
+            zl = np.linspace(0, 100)
+            xl=zl*0+0.0211811
+            yl=zl*0+0.0545666
+            ax.plot(xl, yl, zl, c='k', ls=':', markersize=1)
+            ax.set_title('経験への開放性\n', size=25)
+            plt.savefig("O.png")
+            plt.show()
+        case 3:
+            ax.plot(-0.0196586, 0.088266, 100, c='b', marker='.', ls='None', label='最大(100)')
+            ax.legend(fontsize=7)
+            ax.plot(-0.0196586, 0.088266, 0, c='k', marker='.')
+            zl = np.linspace(0, 100)
+            xl=zl*0-0.0196586
+            yl=zl*0+0.088266
+            ax.plot(xl, yl, zl, c='k', ls=':', markersize=1)
+            ax.set_title('勤勉性\n', size=25)
+            plt.savefig("C.png")
+            plt.show()
+        case 4:
+            ax.plot(0.0123883, -0.0300417, 100, c='b', marker='.', ls='None', label='最大(100)')
+            ax.legend(fontsize=7)
+            ax.plot(0.0123883, -0.0300417, 0, c='k', marker='.')
+            zl = np.linspace(0, 100)
+            xl=zl*0+0.0123883
+            yl=zl*0-0.0300417
+            ax.plot(xl, yl, zl, c='k', ls=':', markersize=1)
+            ax.set_title('協調性\n', size=25)
+            plt.savefig("A.png")
+            plt.show()
+    plt.close()
 
 
 
