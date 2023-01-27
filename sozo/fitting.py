@@ -50,23 +50,19 @@ for i in range(5):
         case 0:
             ax.set_title('外向性\n', size=25)
             plt.savefig("E_original.png")
-            plt.show()
         case 1:
             ax.set_title('情緒不安定性\n', size=25)
             plt.savefig("N_original.png")
-            plt.show()
         case 2:
             ax.set_title('経験への開放性\n', size=25)
             plt.savefig("O_original.png")
-            plt.show()
         case 3:
             ax.set_title('勤勉性\n', size=25)
             plt.savefig("C_original.png")
-            plt.show()
         case 4:
             ax.set_title('協調性\n', size=25)
             plt.savefig("A_original.png")
-            plt.show()
+    #plt.show()
     plt.close()
     R2,tmp1,tmp2,z_ave=0,0,0,np.average(zp)
     for j in range(13) :

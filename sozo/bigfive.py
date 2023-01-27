@@ -24,28 +24,22 @@ x = np.arange(-0.2, 0.4, 0.01)
 y = np.arange(-0.2, 0.2, 0.01)
 X, Y = np.meshgrid(x, y)
 
-bigfive=[50,50,50,50,50]
+#bigfive=[50,50,50,50,50]
 
 # plot_surfaceで曲面プロット
 for i in range(5):
     plt.rcParams['font.family'] = "MS Gothic"
     fig, ax = plt.subplots(figsize=(6, 6), subplot_kw={'projection' : '3d'})
     fig.colorbar(ax.plot_surface(X, Y, func1(X, Y, i), rstride=1, cstride=10, cmap='jet', alpha=0.4), ax=ax, shrink=0.5)
-    ax.scatter3D(0.3, 0.1, bigfive[i], s=10, color='red', depthshade=True)
+#    ax.scatter3D(0.3, 0.1, bigfive[i], s=10, color='red', depthshade=True)
     
-    ax.plot(0.3, 0.1, bigfive[i], c='r', marker='.', ls='None', label='あなた('+str(bigfive[i])+')')
-    ax.plot(0.3, 0.1, 0, c='k', marker='.')
-    ax.plot(0.134475, 0.0981391, 100, c='b', marker='.', ls='None', label='最大(100)')
-    ax.plot(0.134475, 0.0981391, 0, c='k', marker='.')
+#    ax.plot(0.3, 0.1, bigfive[i], c='r', marker='.', ls='None', label='あなた('+str(bigfive[i])+')')
+#    ax.plot(0.3, 0.1, 0, c='k', marker='.')
     #ax.plot(0.3, 0.2, bigfive[i], c='k', marker='.')
-    zl = np.linspace(0, bigfive[i])
-    xl=zl*0+0.3
-    yl=zl*0+0.1
-    ax.plot(xl, yl, zl, c='k', ls=':', markersize=1)
-    zl = np.linspace(0, 100)
-    xl=zl*0+0.134475
-    yl=zl*0+0.0981391
-    ax.plot(xl, yl, zl, c='k', ls=':', markersize=1)
+#    zl = np.linspace(0, bigfive[i])
+#    xl=zl*0+0.3
+#    yl=zl*0+0.1
+#    ax.plot(xl, yl, zl, c='k', ls=':', markersize=1)
     #yl = np.linspace(0.1, 0.2)
     #xl=yl*0+0.3
     #zl=yl*0+bigfive[i]
@@ -64,26 +58,51 @@ for i in range(5):
     ax.set_ylabel('\n\n発話速度(log scale)', size=15)
     ax.set_zticks([])
     ax.view_init(elev=50, azim=225)
-    ax.legend(fontsize=7)
     match i:
         case 0:
+            ax.plot(0.134475, 0.0981391, 100, c='b', marker='.', ls='None', label='最大(100)')
+            ax.plot(0.134475, 0.0981391, 0, c='k', marker='.')
+            ax.legend(fontsize=7)
+            zl = np.linspace(0, 100)
+            xl=zl*0+0.134475
+            yl=zl*0+0.0981391
             ax.set_title('外向性\n', size=25)
-            plt.savefig("E.png")
-            plt.show()
+            plt.savefig("E_new.png")
         case 1:
+            ax.plot(0.00551714, 0.178366, 0, c='k', marker='.')
+            ax.plot(0.00551714, 0.178366, 3, c='b', marker='.', ls='None', label='最小(0)')
+            ax.legend(fontsize=7)
             ax.set_title('情緒不安定性\n', size=25)
-            plt.savefig("N.png")
-            plt.show()
+            plt.savefig("N_new.png")
         case 2:
+            ax.plot(0.0211811, 0.0545666, 100, c='b', marker='.', ls='None', label='最大(100)')
+            ax.legend(fontsize=7)
+            ax.plot(0.0211811, 0.0545666, 0, c='k', marker='.')
+            zl = np.linspace(0, 100)
+            xl=zl*0+0.0211811
+            yl=zl*0+0.0545666
+            ax.plot(xl, yl, zl, c='k', ls=':', markersize=1)
             ax.set_title('経験への開放性\n', size=25)
-            plt.savefig("O.png")
-            plt.show()
+            plt.savefig("O_new.png")
         case 3:
+            ax.plot(-0.0196586, 0.088266, 100, c='b', marker='.', ls='None', label='最大(100)')
+            ax.legend(fontsize=7)
+            ax.plot(-0.0196586, 0.088266, 0, c='k', marker='.')
+            zl = np.linspace(0, 100)
+            xl=zl*0-0.0196586
+            yl=zl*0+0.088266
+            ax.plot(xl, yl, zl, c='k', ls=':', markersize=1)
             ax.set_title('勤勉性\n', size=25)
-            plt.savefig("C.png")
-            plt.show()
+            plt.savefig("C_new.png")
         case 4:
+            ax.plot(0.0123883, -0.0300417, 100, c='b', marker='.', ls='None', label='最大(100)')
+            ax.legend(fontsize=7)
+            ax.plot(0.0123883, -0.0300417, 0, c='k', marker='.')
+            zl = np.linspace(0, 100)
+            xl=zl*0+0.0123883
+            yl=zl*0-0.0300417
+            ax.plot(xl, yl, zl, c='k', ls=':', markersize=1)
             ax.set_title('協調性\n', size=25)
-            plt.savefig("A.png")
-            plt.show()
+            plt.savefig("A_new.png")
+    #plt.show()
     plt.close()
