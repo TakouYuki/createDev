@@ -1,3 +1,6 @@
+#統合前に仮に設定してたやつ。これ消しといて。
+total_count=400
+sex=0
 import librosa
 import librosa.display
 import matplotlib.pyplot as plt
@@ -6,6 +9,10 @@ import numpy as np
 import scipy.interpolate as scipl
 import pandas as pd
 
+
+
+
+
 #A特性カーブ
 def A(f0):
     RA=12194**2*f0**4/((f0**2+20.6**2)*((f0**2+107.7**2)*(f0**2+737.9**2))**(1/2)*(f0**2+12194**2))
@@ -13,28 +20,23 @@ def A(f0):
 
 # ファイル読み込み
 filename = ".\\test2.wav"
+filename2 = ".\\test1 (1).wav"
 y, sr = librosa.load(filename)
+y2, sr2 = librosa.load(filename2)
 
 
 # 基本周波数をstftにより求める。
 f0, voiced_flag, voiced_probs = librosa.pyin(y, fmin=librosa.note_to_hz('C2'), fmax=librosa.note_to_hz('C7'))
+f02, voiced_flag, voiced_probs = librosa.pyin(y2, fmin=librosa.note_to_hz('C2'), fmax=librosa.note_to_hz('C7'))
 times = librosa.times_like(f0) 
+times2 = librosa.times_like(f02) 
 
-#plt.plot(times, y)
-D = librosa.amplitude_to_db(np.abs(librosa.stft(y)), ref=np.max)
-fig, ax = plt.subplots()
-img = librosa.display.specshow(D, x_axis='time', y_axis='log', ax=ax)
-ax.set(title='pYIN fundamental frequency estimation')
-fig.colorbar(img, ax=ax, format="%+2.f dB")
-ax.plot(times, f0, label='f0', color='cyan', linewidth=3)
-plt.rcParams['font.family'] = "MS Gothic"
-ax.legend(loc='upper right')
-plt.savefig('stft.png')
-plt.close()
 
 # 音量をrmsと常用対数により求める。
 rms = librosa.feature.rms(y=y)   #音圧[Pa], rms➡音圧実効値
+rms2 = librosa.feature.rms(y=y2)
 vol = np.array([])
+vol2 = np.array([])
 for i in range(len(times)) :                #ノイズの音圧実効値
     if (50<f0[i]<10000)==0 :
         vol0=rms[0][i]
@@ -47,60 +49,143 @@ for i in range(len(times)) :
     if vol[i]-5<0 :
         vol[i]=0
 
-plt.plot(times, vol)
-plt.rcParams['font.family'] = "MS Gothic"
-plt.title("Noise Level-Time Graph")
-plt.xlabel('Time[s]')
-plt.ylabel('Noise Level[dB]')
-plt.savefig('volume.png')
-plt.close()
+for i in range(len(times2)) :
+    if rms2[0][i]!=0 and 50<f02[i]<10000 :
+            vol2=np.append(vol2, 20 * np.log10(rms2[0][i]/vol0))  #相手の音圧レベル
+    else :
+        vol2=np.append(vol2, 0)
+    if vol2[i]-5<0 :
+        vol2[i]=0
 
 
 # dtごとに平均をとった音の大きさと高さのグラフを作成する。
 dt=5
 V_ave_dt=np.array([])
 F_ave_dt=np.array([])
+V2_ave_dt=np.array([])
+F2_ave_dt=np.array([])
+Sound_around=np.array([0,0])
+V_everyday_Min=np.array([20,20])
+V_everyday_Max=np.array([31,31])
+V_loud_Min=np.array([58,58])
+V_loud_Max=np.array([69,69])
+F_all_ave=np.array([[150,150],[270,270]])
+
+
+t_Max=np.array([0,times[len(times)-1] if len(times)>len(times2) else times2[len(times2)-1]])
 t=np.array([])
-Vtmp,Ftmp=0,0
+t2=np.array([])
 for i in range(int(len(times)/(dt*sr/512))) :
-    Vtmp,Ftmp,jtmp=0,0,0
+    Vtmp,Ftmp,jtmp,jjtmp=0,0,0,0
     for j in range(int(dt*sr/512)) :
-        Vtmp+=vol[int(dt*sr/512*i+j)]
+        if vol[int(dt*sr/512*i+j)]>0:
+            Vtmp+=vol[int(dt*sr/512*i+j)]
+            jjtmp+=1
         if f0[int(dt*sr/512*i+j)]<10000:
             Ftmp+=f0[int(dt*sr/512*i+j)]
             jtmp+=1
 
-    Vtmp/=dt*sr/512
+    if jjtmp!=0:
+        Vtmp/=jjtmp
     if jtmp!=0:
         Ftmp/=jtmp
-    for j in range(int(dt*sr/512)):
-        V_ave_dt=np.append(V_ave_dt, Vtmp)
-        F_ave_dt=np.append(F_ave_dt, Ftmp)
-Vtmp,Ftmp,jtmp=0,0,0
+
+    V_ave_dt=np.append(V_ave_dt, Vtmp)
+    V_ave_dt=np.append(V_ave_dt, Vtmp)
+    F_ave_dt=np.append(F_ave_dt, Ftmp)
+    F_ave_dt=np.append(F_ave_dt, Ftmp)
+    t=np.append(t, times[i*int(dt*sr/512)])
+    t=np.append(t, times[(i+1)*int(dt*sr/512)])
+
+Vtmp,Ftmp,jtmp,jjtmp=0,0,0,0
 for k in range(len(times)-(i+1)*(j+1)) :
-    Vtmp+=vol[(i+1)*(j+1)+k]
+    if vol[(i+1)*(j+1)+k]>0:
+        Vtmp+=vol[(i+1)*(j+1)+k]
+        jjtmp+=1
     if f0[(i+1)*(j+1)+k]<10000 :
         Ftmp+=f0[(i+1)*(j+1)+k]
         jtmp+=1
-Vtmp/=len(times)-(i+1)*(j+1)
+
+if jjtmp!=0:
+    Vtmp/=jjtmp
 if jtmp!=0:
     Ftmp/=jtmp
-for k in range(len(times)-(i+1)*(j+1)):
-    V_ave_dt=np.append(V_ave_dt, Vtmp)
-    F_ave_dt=np.append(F_ave_dt, Ftmp)
+
+V_ave_dt=np.append(V_ave_dt, Vtmp)
+V_ave_dt=np.append(V_ave_dt, Vtmp)
+F_ave_dt=np.append(F_ave_dt, Ftmp)
+F_ave_dt=np.append(F_ave_dt, Ftmp)
+t=np.append(t, times[(i+1)*int(dt*sr/512)])
+t=np.append(t, times[len(times)-1])
+
+
+for i in range(int(len(times2)/(dt*sr/512))) :
+    V2tmp,F2tmp,j2tmp,jj2tmp=0,0,0,0
+    for j in range(int(dt*sr/512)) :
+        if vol2[int(dt*sr/512*i+j)]>0:
+            V2tmp+=vol2[int(dt*sr/512*i+j)]
+            jj2tmp+=1
+        if f02[int(dt*sr/512*i+j)]<10000:
+            F2tmp+=f02[int(dt*sr/512*i+j)]
+            j2tmp+=1
+
+    if jj2tmp!=0:
+        V2tmp/=jj2tmp
+    if j2tmp!=0:
+        F2tmp/=j2tmp
+
+    V2_ave_dt=np.append(V2_ave_dt, V2tmp)
+    V2_ave_dt=np.append(V2_ave_dt, V2tmp)
+    F2_ave_dt=np.append(F2_ave_dt, F2tmp)
+    F2_ave_dt=np.append(F2_ave_dt, F2tmp)
+    t2=np.append(t2, times2[i*int(dt*sr/512)])
+    t2=np.append(t2, times2[(i+1)*int(dt*sr/512)])
+
+V2tmp,F2tmp,j2tmp,jj2tmp=0,0,0,0
+for k in range(len(times2)-(i+1)*(j+1)) :
+    if vol2[(i+1)*(j+1)+k]>0:
+        V2tmp+=vol2[(i+1)*(j+1)+k]
+        jj2tmp+=1
+    if f02[(i+1)*(j+1)+k]<10000 :
+        F2tmp+=f02[(i+1)*(j+1)+k]
+        j2tmp+=1
+
+if jj2tmp!=0:
+    V2tmp/=jj2tmp
+if j2tmp!=0:
+    F2tmp/=j2tmp
+
+V2_ave_dt=np.append(V2_ave_dt, V2tmp)
+V2_ave_dt=np.append(V2_ave_dt, V2tmp)
+F2_ave_dt=np.append(F2_ave_dt, F2tmp)
+F2_ave_dt=np.append(F2_ave_dt, F2tmp)
+t2=np.append(t2, times2[(i+1)*int(dt*sr/512)])
+t2=np.append(t2, times2[len(times2)-1])
+
+
+
+
 plt.rcParams['font.family'] = "MS Gothic"
-plt.plot(times, V_ave_dt)
+plt.plot(t2, V2_ave_dt, color="blue", label="相手")
+plt.plot(t, V_ave_dt, color="red", label="あなた")
+plt.plot(t_Max, Sound_around, color="k", ls=":", label="環境音(0[dB])")
+plt.plot(t_Max, V_everyday_Min, color="k", ls="--", label="全体平均の目安(10～21[dB])")
+plt.plot(t_Max, V_everyday_Max, color="k", ls="--")
 plt.title("5秒ごとの平均音圧レベル")
-plt.xlabel('Time[s]')
+plt.xlabel('時間[s]')
 plt.ylabel('音圧レベル[dB]')
+plt.legend(loc=0)
 plt.savefig('volume(dt=5s).png')
 plt.close()
 
 plt.rcParams['font.family'] = "MS Gothic"
-plt.plot(times, F_ave_dt)
-plt.title("f0-Time Graph (5s ave)")
-plt.xlabel('Time[s]')
-plt.ylabel('f0[Hz]')
+plt.plot(t2, F2_ave_dt, color="blue", label="相手")
+plt.plot(t, F_ave_dt, color="red", label="あなた")
+plt.plot(t_Max, F_all_ave[sex], color="k", ls="--", label="全体平均"+("(男)" if sex==0 else "(女)"))
+plt.title("5秒ごとの平均周波数")
+plt.xlabel('時間[s]')
+plt.ylabel('基本周波数[Hz]')
+plt.legend(loc=0)
 plt.savefig('f0(dt=5s).png')
 plt.close()
 
@@ -110,55 +195,88 @@ plt.close()
 # 音の大きさの判定
 Em_t=1.3
 cntV_all,cntV_all_true,cntEm_all,cntEm,V_ave,cntcntEm,empty_ave=0,0,0,0,0,0,0
+cntV2_all,cntV2_all_true,cntEm2_all,cntEm2,V2_ave,cntcntEm2,empty2_ave=0,0,0,0,0,0,0
+Silent, Prop=0,0
 for i in range(len(times)) :
     if vol[i]>0:
         cntV_all+=1                         #間なしのカウント
         cntV_all_true+=1                    #間ありのカウント
         cntEm=(int)(Em_t*sr/512)            #間判定の秒数(1s = sr個 = sr/512 times)
         V_ave+=vol[i]
-    elif cntEm>=0 :
+
+    elif cntEm>=-1:
         if cntEm==(int)(Em_t*sr/512) :
             cntcntEm+=1                     #間になった瞬間にだけ間の回数を増やす。
         if cntEm>0:
             cntV_all_true+=1                #間の間も真にしゃべっている時間を増やす。
             cntEm_all+=1                    #間の時間をカウントする。
-        if cntEm==0:
+        if cntEm==0:                        #実は間ではなくもう話が終わっていたとき、すべて元に戻す。
             cntV_all_true-=(int)(Em_t*sr/512)
             cntEm_all-=(int)(Em_t*sr/512)
             cntcntEm-=1
         cntEm-=1                            #間判定の時間を経過させていく。
+    
+    if i<len(times2) and vol2[i]>0:
+        cntV2_all+=1                         #間なしのカウント
+        cntV2_all_true+=1                    #間ありのカウント
+        cntEm2=(int)(Em_t*sr/512)            #間判定の秒数(1s = sr個 = sr/512 times)
+        V2_ave+=vol2[i]
+
+    elif cntEm2>=0 :
+        if cntEm2==(int)(Em_t*sr/512) :
+            cntcntEm2+=1                     #間になった瞬間にだけ間の回数を増やす。
+        if cntEm2>0:
+            cntV2_all_true+=1                #間の間も真にしゃべっている時間を増やす。
+            cntEm2_all+=1                    #間の時間をカウントする。
+        if cntEm2==0:                        #実は間ではなくもう話が終わっていたとき、すべて元に戻す。
+            cntV2_all_true-=(int)(Em_t*sr/512)
+            cntEm2_all-=(int)(Em_t*sr/512)
+            cntcntEm2-=1
+        cntEm2-=1                            #間判定の時間を経過させていく。
+
+    if cntEm<0 and cntEm2<0:
+        Silent+=1                            #どっちも黙ったと確証を得てから、黙っているカウントを増やす。
+
 
 V_ave/=cntV_all
 empty_ave=cntEm_all/cntcntEm*512/sr
 
+V2_ave/=cntV2_all
+empty2_ave=cntEm2_all/cntcntEm2*512/sr
+
 times_all=len(y)/sr
 time=cntV_all_true/len(times)*times_all
+time2=cntV2_all_true/len(times)*times_all
+
+Silent*=512/sr
+Prop=time2/time
 
 
 #音の高さの判定
-cntF_all,F_ave=0,0
+cntF_all,F_ave,cntF2_all,F2_ave=0,0,0,0
 for i in range(len(times)) :
     if 50<f0[i]<10000 :
         cntF_all+=1
         F_ave+=f0[i]
+    if i<len(times2) and 50<f02[i]<10000 :
+        cntF2_all+=1
+        F2_ave+=f02[i]
 F_ave/=cntF_all
+F2_ave/=cntF2_all
 
 
 #結果の出力
-if cntV_all!=0 :
-    print(V_ave)                            #声の平均的な大きさが環境音の何倍か[dB] or 人の最小可聴値の何倍か[dB]
-    print(empty_ave)                        #間の平均的な長さ[s]
-
-else :
-    print("声は録音されませんでした。")
+print(V_ave)                                #声の平均的な大きさが環境音の何倍か[dB] or 人の最小可聴値の何倍か[dB]
+print(V2_ave)
+print(empty_ave)                            #間の平均的な長さ[s]
+print(empty2_ave)
 print(time)                                 #話している時間[s]
-if cntF_all!=0 :
-    print(F_ave)                            #声の平均的な高さ[Hz]
-
-#黙っている時間、話している比、全部の時間
-Silent=0
-Prop=0
-
+print(time2)
+print(F_ave)                                #声の平均的な高さ[Hz]
+print(F2_ave)
+print(Silent)                               #黙っている時間
+print(Prop)                                 #話している比
+print(times_all)                            #全部の時間
 
 
 #bigfiveを計算
@@ -175,9 +293,8 @@ def func(x, y, i):
         case 4:
             return 3.6219890942118*(-128.41373455909*x**2+3.1816457761492*x-157.14417768061*y**2-9.4417488311249*y+26.228817191891)+4.4146212070231#協調性
 
-total_count=400
+
 Wpm=total_count/(time/60)
-sex=0
 f0_ave=[150, 270]
 logF=np.log10(F_ave/f0_ave[sex])
 logWpm=np.log10(Wpm/400)
@@ -185,7 +302,6 @@ bigfive=[]
 
 for i in range(5) :
     bigfive.append(func(logF, logWpm, i))
-
 
 
 
@@ -248,22 +364,20 @@ for i in range(5):
     match i:
         case 0:
             ax.plot(0.134475, 0.0981391, 100, c='b', marker='.', ls='None', label='最大(100)')
-            ax.legend(fontsize=7)
             ax.plot(0.134475, 0.0981391, 0, c='k', marker='.')
+            ax.legend(fontsize=7)
             zl = np.linspace(0, 100)
             xl=zl*0+0.134475
             yl=zl*0+0.0981391
             ax.plot(xl, yl, zl, c='k', ls=':', markersize=1)
             ax.set_title('外向性\n', size=25)
             plt.savefig("E.png")
-            plt.show()
         case 1:
             ax.plot(0.00551714, 0.178366, 0, c='k', marker='.')
             ax.plot(0.00551714, 0.178366, 3, c='b', marker='.', ls='None', label='最小(0)')
             ax.legend(fontsize=7)
             ax.set_title('情緒不安定性\n', size=25)
             plt.savefig("N.png")
-            plt.show()
         case 2:
             ax.plot(0.0211811, 0.0545666, 100, c='b', marker='.', ls='None', label='最大(100)')
             ax.legend(fontsize=7)
@@ -274,7 +388,6 @@ for i in range(5):
             ax.plot(xl, yl, zl, c='k', ls=':', markersize=1)
             ax.set_title('経験への開放性\n', size=25)
             plt.savefig("O.png")
-            plt.show()
         case 3:
             ax.plot(-0.0196586, 0.088266, 100, c='b', marker='.', ls='None', label='最大(100)')
             ax.legend(fontsize=7)
@@ -285,7 +398,6 @@ for i in range(5):
             ax.plot(xl, yl, zl, c='k', ls=':', markersize=1)
             ax.set_title('勤勉性\n', size=25)
             plt.savefig("C.png")
-            plt.show()
         case 4:
             ax.plot(0.0123883, -0.0300417, 100, c='b', marker='.', ls='None', label='最大(100)')
             ax.legend(fontsize=7)
@@ -296,7 +408,7 @@ for i in range(5):
             ax.plot(xl, yl, zl, c='k', ls=':', markersize=1)
             ax.set_title('協調性\n', size=25)
             plt.savefig("A.png")
-            plt.show()
+    #plt.show()
     plt.close()
 
 
