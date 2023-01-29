@@ -16,7 +16,6 @@ speech_config.speech_recognition_language="ja-JP"
 audio_config = speechsdk.audio.AudioConfig(filename=FILE_PATH)
 speech_recognizer = speechsdk.SpeechRecognizer(speech_config=speech_config, audio_config=audio_config)
 
-# file = open('result.txt','w')
 
 recognize = []                  #文字起こしのデータすべてを格納
 done = False
@@ -24,6 +23,8 @@ extract = []                    #recognizeの中の会話内容を抽出
 target1 = r'text="'             #会話内容の最初の場所を判定する用
 target2 = r'",'                 #会話内容の最後の場所を判定する用
 kks = pykakasi.kakasi()         #ひらがなに変換するために必要なオブジェクト
+mf_check = re.compile(r'^[mMfF]+$') #性別判定
+mf = ''
 NG = []
 NG_count = []
 HIGE = []
@@ -49,7 +50,6 @@ speech_recognizer.start_continuous_recognition()
 while not done:
     time.sleep(.5)
 
-# [print(x) for x in recognize]
 
 for a in recognize:
     test = a
@@ -60,24 +60,19 @@ for a in recognize:
 # ここで余分な情報を排除
 
 print('---------------\n')
-# file.write('文字起こし\n---------------\n')
 [print(x) for x in extract]
-# for x in extract:
-#     file.write("%s\n" % x)
 
 
 for a in extract:
     test=list((t.tokenize(a)))
     for x in test:
         tango.append(x)
-# [print(x) for x in tango]
 # 分かち書き
 
-eee = tango.index('え')
-if(tango[eee] == tango[eee+1]):
-    tango[eee] = 'えー'
-    del tango[eee+1]
-
+for i,x in enumerate(tango):
+    if(x == 'え'):
+        tango[i] = 'えー'
+        del tango[i+1]
 
 for a in tango:
     test = a
@@ -86,7 +81,6 @@ for a in tango:
     hiragana.append(re.sub("、|。|！|？","",hiramoji))
 # ひらがなに変換
 
-# [print(x) for x in hiragana]
 
 with open('hige.txt','r',encoding = "utf-8") as f:
     HIGE = f.read().splitlines()
@@ -105,27 +99,33 @@ print('---------------')
    
 for a, b in zip(HIGE,hige_count):
     hige_total_count += b
-    if(trush == 0):
-        print('\nひげ')
-        trush += 1
-    # file.write('---------------\nひげ\n')
-    print(a,b)
-    # file.write(a)
-    # file.write(' ')
-    # file.write(str(b))
-    # file.write('\n')
-
-print('\nひげ総数 ',hige_total_count)
-    # file.write('\nひげ総数 ')
-    # file.write(str(hige_total_count))
-    # file.write('\n')
-
+    if(b != 0):
+        if(trush == 0):
+            print('\nひげ')
+            trush += 1
+        print(a,b)
+if(hige_total_count != 0):
+    print('\nひげ総数 ',hige_total_count)
 # ひげのカウント
 
 f.close()
 
 with open ('test.txt','r',encoding = "utf-8") as f:
     NG = f.read().splitlines()
+
+mf = NG[0]
+del NG[0]
+
+if 'm' in mf:
+    sex = 0
+elif 'M' in mf:
+    sex = 0
+elif 'f' in mf:
+    sex = 1
+elif 'F' in mf:
+    sex = 1
+
+print(sex)    
 
 for a in NG:
     NG_count.append(0)
@@ -138,14 +138,9 @@ for a in tango:
 
 if NG != []:   
     print('\nNGワード')
-    # file.write('\nNGワード\n')
 
 for a, b in zip(NG, NG_count):
-    print(a,b)
-    # file.write(a)
-    # file.write(' ')
-    # file.write(str(b))
-    # file.write('\n')
+        print(a,b)
 
 # NGワードをカウント(上のNGでワード管理)
 
@@ -158,20 +153,89 @@ for a in hiragana:
 #文字数カウント
 
 print('\n文字数トータル ',total_count)
-# file.write('\n文字数トータル ')
-# file.write(str(total_count))
-# file.write('\n')
 
-# bpm = total_count / time
-# print('1分あたりの話量',bpm)
-# file.close()
  
-with wave.open(FILE_PATH, 'rb') as wr:
-    fr = wr.getframerate()
-    fn = wr.getnframes()
-    time = fn / fr
 
-    print("\n再生時間 ",1.0 * time)
-#とりあえずtimeをwavファイルの半分にするためのやつ 後で消す
+# ここから下は一番最後にしてほしい
 
-time = time / 2
+file = open("mojiokosi.txt","w",encoding = 'utf-8')
+
+for x in extract:
+    file.write(x)
+    file.write('\n')
+
+file.write('\n総文字数 ',total_count)
+file.close()
+
+file = open("result.txt","w",encoding = 'utf-8')
+
+
+trush = 0
+for a, b in zip(HIGE,hige_count):
+    if(b != 0):
+        if(trush == 0):
+            file.write('ひげ')
+            file.write('\n')
+            trush += 1
+        file.write(a)
+        file.write(' ', b)
+        file.write('\n')
+
+file.write('\n')
+file.write('NG')
+
+for a, b in zip(NG, NG_count):
+    file.write(a)
+    file.write(' ', b)
+    file.write('\n')
+
+file.write('外向性 ',bigfive[0])
+file.write('\n')
+file.write('情緒不安定性 ',bigfive[1])
+file.write('\n')
+file.write('経験への開放性 ',bigfive[2])
+file.write('\n')
+file.write('勤勉性 ',bigfive[3])
+file.write('\n')
+file.write('協調性 ',bigfive[4])
+file.write('\n')
+
+file.write('話者が話している時間[s] ',times_all)
+file.write('\n')
+
+file.write('声の周波数全国平均[Hz] 男性',f0_ave[0])
+file.write('\n')
+file.write('声の周波数全国平均[Hz] 女性',f0_ave[1])
+file.write('\n')
+file.write('1分間話量全国平均[文字/分] ',400)
+file.write('\n')
+
+file.write('測定者の声の大きさの平均[dB] ',V_ave)
+file.write('\n')
+file.write('測定者の声の高さの平均[Hz] '.F_ave)
+file.write('\n')
+file.write('測定者の間の長さの平均[s] ',empty_ave)
+file.write('\n')
+
+file.write('発話速度[文字/m] ',Wpm)
+file.write('\n')
+file.write('双方が無言である総時間[s] ',Silent)
+file.write('\n')
+file.write('自分を1とした相手の話量の比 ',Prop)
+file.write('\n')
+
+file.close()
+
+#　出力データ
+#　文字起こしの原文 mojiokosi.txt
+#　その他データ　result.txt
+#　ひげ、NGワードとその量
+#　ひげ、NGワードの総数
+#　BigFiveの具体的な値 5 bigfive[5]の0~4　外向性、情緒不安定性、経験への開放性、勤勉性、協調性の順
+#　音声ファイルのうちのしゃべっている時間 1 times_all
+#　声の全国平均（高さ、1分間話量) 3 f0_ave[2] 0がm 1がf 話量400
+#　声の平均的な大きさ（環境音との比）1、V_ave 平均的な高さ 1 F_ave
+#　平均的な間の長さ 1 empty_ave
+#　発話速度 1 Wpm
+#　両方が黙っている時間の総量 1 Silent
+#　自分を1としてあいての話量の比率 1 Prop
