@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import pylab
 import wave
 
-FILE_PATH = "001-sibutomo.wav"
+FILE_PATH = "aaaaa.wav"
 speech_config = speechsdk.SpeechConfig(subscription="9b198a686fbf45c79fe8c1f24f02249d", region="japaneast")
 speech_config.speech_recognition_language="ja-JP"
 audio_config = speechsdk.audio.AudioConfig(filename=FILE_PATH)
@@ -50,7 +50,8 @@ speech_recognizer.canceled.connect(stop_cb)
 speech_recognizer.start_continuous_recognition()
 #ここまでで音声を文字起こし
 while not done:
-    time.sleep(.5)
+    time.sleep(.3)
+
 
 
 for a in recognize:
@@ -130,8 +131,6 @@ elif 'f' in mf:
 elif 'F' in mf:
     sex = 1
 
-print(sex)    
-
 for a in NG:
     NG_count.append(0)
 
@@ -169,7 +168,7 @@ for x in extract:
     file.write(x)
     file.write('\n')
 
-file.write('\n総文字数 ',total_count)
+file.write('\n総文字数 '+str(total_count))
 file.close()
 
 file = open("result.txt","w",encoding = 'utf-8')
@@ -183,7 +182,7 @@ for a, b in zip(HIGE,hige_count):
             file.write('\n')
             trush += 1
         file.write(a)
-        file.write(' ', b)
+        file.write(' ' + str(b))
         file.write('\n')
 
 file.write('\n')
@@ -191,42 +190,42 @@ file.write('NG')
 
 for a, b in zip(NG, NG_count):
     file.write(a)
-    file.write(' ', b)
+    file.write(' ' + str(b))
     file.write('\n')
 
-file.write('外向性 ',bigfive[0])
+file.write('外向性 ' + str(bigfive[0]))
 file.write('\n')
-file.write('情緒不安定性 ',bigfive[1])
+file.write('情緒不安定性 ' + str(bigfive[1]))
 file.write('\n')
-file.write('経験への開放性 ',bigfive[2])
+file.write('経験への開放性 ' + str(bigfive[2]))
 file.write('\n')
-file.write('勤勉性 ',bigfive[3])
+file.write('勤勉性 ' + str(bigfive[3]))
 file.write('\n')
-file.write('協調性 ',bigfive[4])
-file.write('\n')
-
-file.write('話者が話している時間[s] ',times_all)
+file.write('協調性 ' + str(bigfive[4]))
 file.write('\n')
 
-file.write('声の周波数全国平均[Hz] 男性',f0_ave[0])
-file.write('\n')
-file.write('声の周波数全国平均[Hz] 女性',f0_ave[1])
-file.write('\n')
-file.write('1分間話量全国平均[文字/分] ',400)
+file.write('話者が話している時間[s] ' + str(times_all))
 file.write('\n')
 
-file.write('測定者の声の大きさの平均[dB] ',V_ave)
+file.write('声の周波数全国平均[Hz] 男性 ' + str(f0_ave[0]))
 file.write('\n')
-file.write('測定者の声の高さの平均[Hz] '.F_ave)
+file.write('声の周波数全国平均[Hz] 女性 ' + str(f0_ave[1])
 file.write('\n')
-file.write('測定者の間の長さの平均[s] ',empty_ave)
+file.write('1分間話量全国平均[文字/分] ' + "400")
 file.write('\n')
 
-file.write('発話速度[文字/m] ',Wpm)
+file.write('測定者の声の大きさの平均[dB] ' + str(V_ave))
 file.write('\n')
-file.write('双方が無言である総時間[s] ',Silent)
+file.write('測定者の声の高さの平均[Hz] ' + str(F_ave))
 file.write('\n')
-file.write('自分を1とした相手の話量の比 ',Prop)
+file.write('測定者の間の長さの平均[s] ' + str(empty_ave))
+file.write('\n')
+
+file.write('発話速度[文字/m] ' + str(Wpm))
+file.write('\n')
+file.write('双方が無言である総時間[s] ' + str(Silent))
+file.write('\n')
+file.write('自分を1とした相手の話量の比 ' + str(Prop))
 file.write('\n')
 
 file.close()
