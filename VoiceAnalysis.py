@@ -11,7 +11,8 @@ import time
 import sys
 import pykakasi
 import re
-
+sex=0
+total_count=400
 
 
 #A特性カーブ
