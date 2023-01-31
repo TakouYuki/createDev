@@ -1,6 +1,3 @@
-#統合前に仮に設定してたやつ。これ消しといて。
-total_count=400
-sex=0
 import librosa
 import librosa.display
 import matplotlib.pyplot as plt
@@ -8,8 +5,81 @@ from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import scipy.interpolate as scipl
 import pandas as pd
+import os
+import azure.cognitiveservices.speech as speechsdk
+import time
+import sys
+import pykakasi
+import re
+# ファイルの長さの変数　time
+sex=0
 
+speech_config = speechsdk.SpeechConfig(subscription="9b198a686fbf45c79fe8c1f24f02249d", region="japaneast")
+speech_config.speech_recognition_language="ja-JP"
+audio_config = speechsdk.audio.AudioConfig(filename=".\\test2.wav")
+speech_recognizer = speechsdk.SpeechRecognizer(speech_config=speech_config, audio_config=audio_config)
 
+recognize = []                  #文字起こしのデータすべてを格納
+done = False
+extract = []                    #recognizeの中の会話内容を抽出
+target1 = r'text="'             #会話内容の最初の場所を判定する用
+target2 = r'",'                 #会話内容の最後の場所を判定する用
+kks = pykakasi.kakasi()         #ひらがなに変換するために必要なオブジェクト
+NG = ['あー','はい']
+hiragana = []                   #ひらがなに変換した会話内容を格納
+total_count = 0                 #合計文字数を格納
+
+def stop_cb(evt):
+    speech_recognizer.stop_continuous_recognition()
+    global done 
+    done = True
+
+speech_recognizer.recognized.connect(lambda evt:recognize.append(format(evt)))
+speech_recognizer.session_stopped.connect(stop_cb)
+speech_recognizer.canceled.connect(stop_cb)
+speech_recognizer.start_continuous_recognition()
+#ここまでで音声を文字起こし
+while not done:
+    time.sleep(.5)
+
+# [print(x) for x in recognize]
+
+for a in recognize:
+    test = a
+    f = test.find(target1)
+    l = test.find(target2)
+    con = test[f+len(target1):l]
+    extract.append(con)
+# ここで余分な情報を排除
+print('文字起こし')
+[print(x) for x in extract]
+
+NG_count = [0,0]
+
+for a in extract:
+    test = a
+    NG_count[0] += test.count(NG[0])
+    NG_count[1] += test.count(NG[1])
+
+print('あー　',NG_count[0])
+print('はい　',NG_count[1])
+# NGワードをカウント(上のNGでワード管理)
+for a in extract:
+    test = a
+    result = kks.convert(test)
+    hiramoji = ''.join([item['hira'] for item in result])
+    hiragana.append(re.sub("、|。|！|？","",hiramoji))
+# ひらがなに変換
+# print('ひらがな変換')
+# [print(x) for x in hiragana]
+
+for a in hiragana :
+    test = a
+    count = len(test)
+    total_count += count
+#文字数カウント
+
+print('文字数トータル ',total_count)
 
 
 
@@ -20,7 +90,7 @@ def A(f0):
 
 # ファイル読み込み
 filename = ".\\test2.wav"
-filename2 = ".\\test1 (1).wav"
+filename2 = ".\\low.wav"
 y, sr = librosa.load(filename)
 y2, sr2 = librosa.load(filename2)
 
@@ -75,6 +145,8 @@ F_all_ave=np.array([[150,150],[270,270]])
 t_Max=np.array([0,times[len(times)-1] if len(times)>len(times2) else times2[len(times2)-1]])
 t=np.array([])
 t2=np.array([])
+
+i,j=0,0
 for i in range(int(len(times)/(dt*sr/512))) :
     Vtmp,Ftmp,jtmp,jjtmp=0,0,0,0
     for j in range(int(dt*sr/512)) :
@@ -245,11 +317,11 @@ V2_ave/=cntV2_all
 empty2_ave=cntEm2_all/cntcntEm2*512/sr
 
 times_all=len(y)/sr
-time=cntV_all_true/len(times)*times_all
-time2=cntV2_all_true/len(times)*times_all
+time_speach=cntV_all_true/len(times)*times_all
+time2_speach=cntV2_all_true/len(times)*times_all
 
 Silent*=512/sr
-Prop=time2/time
+Prop=time2_speach/time_speach
 
 
 #音の高さの判定
@@ -270,8 +342,8 @@ print(V_ave)                                #声の平均的な大きさが環�
 print(V2_ave)
 print(empty_ave)                            #間の平均的な長さ[s]
 print(empty2_ave)
-print(time)                                 #話している時間[s]
-print(time2)
+print(time_speach)                          #話している時間[s]
+print(time2_speach)
 print(F_ave)                                #声の平均的な高さ[Hz]
 print(F2_ave)
 print(Silent)                               #黙っている時間
@@ -283,18 +355,18 @@ print(times_all)                            #全部の時間
 def func(x, y, i):
     match i:
         case 0:
-            return 7.4153882932119*(-53.50075470756*x**2+14.389064689477*x-84.378980658059*y**2+16.561756149192*y+24.991783088367)-98.524033847039 #外向性
+            return 12.386508614817*(-53.50075470756*x**2+14.389064689477*x-84.378980658059*y**2+16.561756149192*y+24.991783088367)-230.82382668797 #外向性
         case 1:
-            return 10.523312934435*(49.35579530889*x**2-0.54460603183674*x+12.727457105757*y**2-4.5402945174996*y+19.20506882761)-197.82355052927  #情緒不安定性
+            return 52.312199204855*(49.35579530889*x**2-0.54460603183674*x+12.727457105757*y**2-4.5402945174996*y+19.20506882761)-983.93492362419  #情緒不安定性
         case 2:
-            return 6.4644778677204*(-63.60317068405*x**2+2.6943666934754*x-97.86211897341*y**2+10.680010971777*y+22.587194152335)-48.082440963659  #経験への開放性
+            return 19.883482790846*(-63.60317068405*x**2+2.6943666934754*x-97.86211897341*y**2+10.680010971777*y+22.587194152335)-355.47292863818  #経験への開放性
         case 3:
-            return 3.7329190850909*(-85.2966634461*x**2-3.3536266295536*x-141.60276695818*y**2+24.997416986711*y+26.805124137738)-4.3026120322499  #勤勉性
+            return 11.642121194482*(-85.2966634461*x**2-3.3536266295536*x-141.60276695818*y**2+24.997416986711*y+26.805124137738)-225.29600093137  #勤勉性
         case 4:
-            return 3.6219890942118*(-128.41373455909*x**2+3.1816457761492*x-157.14417768061*y**2-9.4417488311249*y+26.228817191891)+4.4146212070231#協調性
+            return 16.448721111934*(-128.41373455909*x**2+3.1816457761492*x-157.14417768061*y**2-9.4417488311249*y+26.228817191891)-334.08668476026#協調性
 
 
-Wpm=total_count/(time/60)
+Wpm=total_count/(time_speach/60)
 f0_ave=[150, 270]
 logF=np.log10(F_ave/f0_ave[sex])
 logWpm=np.log10(Wpm/400)
@@ -339,8 +411,8 @@ plt.close()
 
 #3Dグラフの作成
 # メッシュを作成
-x = np.arange(-0.2, 0.4, 0.01)
-y = np.arange(-0.2, 0.2, 0.01)
+x = np.arange(-0.1, 0.1, 0.001)
+y = np.arange(-0.15, 0.15, 0.001)
 X, Y = np.meshgrid(x, y)
 
 # plot_surfaceで曲面プロット
@@ -363,18 +435,18 @@ for i in range(5):
     ax.view_init(elev=50, azim=225)
     match i:
         case 0:
-            ax.plot(0.134475, 0.0981391, 100, c='b', marker='.', ls='None', label='最大(100)')
-            ax.plot(0.134475, 0.0981391, 0, c='k', marker='.')
+            ax.plot(0.1, 0.0981391, 100, c='b', marker='.', ls='None', label='最大(100)')
+            ax.plot(0.1, 0.0981391, 0, c='k', marker='.')
             ax.legend(fontsize=7)
             zl = np.linspace(0, 100)
-            xl=zl*0+0.134475
+            xl=zl*0+0.1
             yl=zl*0+0.0981391
             ax.plot(xl, yl, zl, c='k', ls=':', markersize=1)
             ax.set_title('外向性\n', size=25)
             plt.savefig("E.png")
         case 1:
-            ax.plot(0.00551714, 0.178366, 0, c='k', marker='.')
-            ax.plot(0.00551714, 0.178366, 3, c='b', marker='.', ls='None', label='最小(0)')
+            ax.plot(0.00551714, 0.15, 0, c='k', marker='.')
+            ax.plot(0.00551714, 0.15, 3, c='b', marker='.', ls='None', label='最小(0)')
             ax.legend(fontsize=7)
             ax.set_title('情緒不安定性\n', size=25)
             plt.savefig("N.png")
@@ -408,7 +480,7 @@ for i in range(5):
             ax.plot(xl, yl, zl, c='k', ls=':', markersize=1)
             ax.set_title('協調性\n', size=25)
             plt.savefig("A.png")
-    #plt.show()
+    plt.show()
     plt.close()
 
 
