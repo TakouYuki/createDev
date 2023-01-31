@@ -35,6 +35,7 @@ total_count = 0                 #合計文字数を格納
 hige_total_count = 0
 trush = 0
 t = Tokenizer(wakati = True)
+sex = 0
 # ファイルの長さ　time
 
 def stop_cb(evt):

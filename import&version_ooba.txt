@@ -3,5 +3,9 @@ azure-recognitiveservices-speech
 time
 pykakasi
 janome
+numpy
+matplotlib
+pylab
+wave
 
 Python 3.10.8
