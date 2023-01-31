@@ -10,13 +10,14 @@ import matplotlib.pyplot as plt
 import pylab
 import wave
 
-FILE_PATH = "test1.wav"
+FILE_PATH = "001-sibutomo.wav"
 speech_config = speechsdk.SpeechConfig(subscription="9b198a686fbf45c79fe8c1f24f02249d", region="japaneast")
 speech_config.speech_recognition_language="ja-JP"
 audio_config = speechsdk.audio.AudioConfig(filename=FILE_PATH)
 speech_recognizer = speechsdk.SpeechRecognizer(speech_config=speech_config, audio_config=audio_config)
 
-
+higefile = "hige.txt"
+NGfile = "test.txt"
 recognize = []                  #文字起こしのデータすべてを格納
 done = False
 extract = []                    #recognizeの中の会話内容を抽出
@@ -83,8 +84,9 @@ for a in tango:
 # ひらがなに変換
 
 
-with open('hige.txt','r',encoding = "utf-8") as f:
-    HIGE = f.read().splitlines()
+if os.path.isfile(higefile):
+    with open(higefile,'r',encoding = "utf-8") as f:
+        HIGE = f.read().splitlines()
 
 for a in HIGE:
     hige_count.append(0)
@@ -105,14 +107,16 @@ for a, b in zip(HIGE,hige_count):
             print('\nひげ')
             trush += 1
         print(a,b)
+
 if(hige_total_count != 0):
     print('\nひげ総数 ',hige_total_count)
 # ひげのカウント
 
 f.close()
 
-with open ('test.txt','r',encoding = "utf-8") as f:
-    NG = f.read().splitlines()
+if os.path.isfile(NGfile):
+    with open (NGfile,'r',encoding = "utf-8") as f:
+        NG = f.read().splitlines()
 
 mf = NG[0]
 del NG[0]
